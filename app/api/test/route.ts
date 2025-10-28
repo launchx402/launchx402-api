@@ -20,8 +20,12 @@ const x402 = new X402PaymentHandler({
     : process.env.NEXT_PUBLIC_SOLANA_RPC_DEVNET,
 });
 
-// Base URL for resources
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+// Base URL for resources - ensure it has a protocol
+let BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+// Add https:// if protocol is missing and not localhost
+if (!BASE_URL.startsWith('http://') && !BASE_URL.startsWith('https://')) {
+  BASE_URL = `https://${BASE_URL}`;
+}
 
 export async function GET(req: NextRequest) {
   try {

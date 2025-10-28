@@ -33,14 +33,6 @@ export default function Home() {
         </code>
       </div>
 
-      <h2>📖 Documentation</h2>
-      <ul>
-        <li><a href="https://github.com/yourusername/x402-test-api/blob/main/QUICKSTART.md">Quick Start Guide</a></li>
-        <li><a href="https://github.com/yourusername/x402-test-api/blob/main/app/api/test/README.md">Full API Documentation</a></li>
-        <li><a href="https://github.com/yourusername/x402-test-api/blob/main/app/api/test/example-client.ts">Client Examples</a></li>
-        <li><a href="https://github.com/yourusername/x402-test-api/blob/main/app/api/test/INTEGRATION.md">x402scan Integration</a></li>
-      </ul>
-
       <h2>🧪 Try It</h2>
       <p>Make a request without payment (returns 402):</p>
       <pre style={{ background: '#1a1a1a', color: '#00ff00', padding: '15px', borderRadius: '5px', overflow: 'auto' }}>
