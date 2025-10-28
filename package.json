@@ -1,0 +1,38 @@
+{
+  "name": "x402-test-api",
+  "version": "1.0.0",
+  "description": "A test API endpoint demonstrating the x402 payment protocol on Solana",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "keywords": [
+    "x402",
+    "solana",
+    "payment",
+    "api",
+    "usdc",
+    "blockchain"
+  ],
+  "dependencies": {
+    "@payai/x402-solana": "latest",
+    "next": "16.0.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.0",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+
