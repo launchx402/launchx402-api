@@ -77,11 +77,6 @@ export async function POST(req: NextRequest) {
                 required: true,
                 description: 'Token description'
               },
-              amount: {
-                type: 'number',
-                required: true,
-                description: 'Initial buy amount in SOL'
-              },
               twitter: {
                 type: 'string',
                 required: false,
@@ -155,7 +150,6 @@ export async function POST(req: NextRequest) {
       name,
       symbol,
       description,
-      amount,
       twitter = '',
       telegram = '',
       website = '',
@@ -163,13 +157,16 @@ export async function POST(req: NextRequest) {
       priorityFee = 0.0005
     } = body;
 
+    // Fixed initial buy amount
+    const amount = 0.02; // Locked to 0.02 SOL
+
     // Validate required fields
-    if (!imageUrl || !name || !symbol || !description || !amount) {
+    if (!imageUrl || !name || !symbol || !description) {
       return NextResponse.json(
         { 
           error: 'Missing required fields', 
           success: false,
-          required: ['imageUrl', 'name', 'symbol', 'description', 'amount']
+          required: ['imageUrl', 'name', 'symbol', 'description']
         }, 
         { status: 400 }
       );
@@ -295,7 +292,7 @@ export async function POST(req: NextRequest) {
         name,
         symbol,
         description,
-        initialBuy: `${amount} SOL`
+        initialBuy: '0.02 SOL'
       }
     };
 

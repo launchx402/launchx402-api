@@ -42,6 +42,10 @@ export default function Home() {
             <strong>Method:</strong> POST (application/json)
           </div>
 
+          <div style={{ marginBottom: '15px' }}>
+            <strong>Initial Buy:</strong> 0.02 SOL (fixed)
+          </div>
+
           <div>
             <strong>Required Parameters:</strong>
             <ul style={{ marginTop: '10px', color: '#555' }}>
@@ -49,7 +53,6 @@ export default function Home() {
               <li><code style={{ background: '#fff', padding: '2px 6px', borderRadius: '3px' }}>name</code> - Token name</li>
               <li><code style={{ background: '#fff', padding: '2px 6px', borderRadius: '3px' }}>symbol</code> - Token symbol</li>
               <li><code style={{ background: '#fff', padding: '2px 6px', borderRadius: '3px' }}>description</code> - Token description</li>
-              <li><code style={{ background: '#fff', padding: '2px 6px', borderRadius: '3px' }}>amount</code> - Initial buy amount in SOL</li>
             </ul>
           </div>
 
@@ -95,7 +98,6 @@ export default function Home() {
     "name": "My Token",
     "symbol": "MTK",
     "description": "An amazing token",
-    "amount": 1,
     "twitter": "https://x.com/mytoken",
     "website": "https://mytoken.com"
   }'`}
