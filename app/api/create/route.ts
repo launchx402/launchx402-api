@@ -42,10 +42,29 @@ const corsHeaders = {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Extract payment header
+    // Validate treasury wallet is configured
+    if (!process.env.TREASURY_WALLET_ADDRESS) {
+      console.error('TREASURY_WALLET_ADDRESS not configured - payments cannot be processed');
+      return NextResponse.json(
+        { error: 'Payment system not configured', success: false },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
+    // 1. Parse request body first to construct the HTTP request message
+    const body = await req.json();
+    
+    // 2. Construct the actual HTTP request message that will be signed
+    const httpRequestMessage = `POST ${BASE_URL}/api/create HTTP/1.1
+Host: ${new URL(BASE_URL).host}
+Content-Type: application/json
+
+${JSON.stringify(body, null, 2)}`;
+
+    // 3. Extract payment header
     const paymentHeader = x402.extractPayment(req.headers);
     
-    // 2. Create payment requirements - $1.00 USDC for token creation
+    // 4. Create payment requirements - $1.00 USDC for token creation
     const paymentRequirements = await x402.createPaymentRequirements({
       price: {
         amount: "1000000",  // $1.00 USDC (in micro-units, as string)
@@ -56,7 +75,7 @@ export async function POST(req: NextRequest) {
       },
       network: NETWORK as 'solana' | 'solana-devnet',
       config: {
-        description: 'Launch Pump.fun Token - LaunchX402',
+        description: httpRequestMessage,
         resource: `${BASE_URL}/api/create` as `${string}://${string}`,
         mimeType: 'application/json',
         maxTimeoutSeconds: 600, // 10 minutes for token creation
@@ -136,7 +155,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 3. Verify payment
+    // 5. Verify payment
     const verified = await x402.verifyPayment(paymentHeader, paymentRequirements);
     if (!verified) {
       return NextResponse.json(
@@ -145,8 +164,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4. Process token creation
-    const body = await req.json();
+    // 6. Process token creation
     
     // Extract request data
     const {
@@ -281,10 +299,22 @@ export async function POST(req: NextRequest) {
     const createData = await createResponse.json();
     console.log('Token created successfully:', createData);
 
-    // 5. Settle payment
-    await x402.settlePayment(paymentHeader, paymentRequirements);
+    // 7. Settle payment - this transfers the USDC to treasury
+    try {
+      const settled = await x402.settlePayment(paymentHeader, paymentRequirements);
+      console.log('Payment settled:', settled);
+      
+      if (!settled) {
+        console.error('Payment settlement returned false');
+        console.warn('Token created but payment settlement failed - manual reconciliation needed');
+      }
+    } catch (error) {
+      console.error('Payment settlement failed:', error);
+      // Token was created but payment failed - log this for investigation
+      console.warn('Token created but payment settlement failed - manual reconciliation needed');
+    }
 
-    // 6. Return success response
+    // 8. Return success response
     const result = {
       success: true,
       signature: createData.signature,
