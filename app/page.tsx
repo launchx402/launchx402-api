@@ -35,7 +35,7 @@ export default function Home() {
           </p>
           
           <div style={{ marginBottom: '15px' }}>
-            <strong>Cost:</strong> <span style={{ color: '#0066cc' }}>$5.00 USDC</span>
+            <strong>Cost:</strong> <span style={{ color: '#0066cc' }}>$0.10 USDC</span>
           </div>
 
           <div style={{ marginBottom: '15px' }}>

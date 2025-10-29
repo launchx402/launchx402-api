@@ -36,10 +36,10 @@ export async function POST(req: NextRequest) {
     // 1. Extract payment header
     const paymentHeader = x402.extractPayment(req.headers);
     
-    // 2. Create payment requirements - $5.00 USDC for token creation
+    // 2. Create payment requirements - $0.10 USDC for token creation
     const paymentRequirements = await x402.createPaymentRequirements({
       price: {
-        amount: "5000000",  // $5.00 USDC (in micro-units, as string)
+        amount: "100000",  // $0.10 USDC (in micro-units, as string)
         asset: {
           address: USDC_MINT,
           decimals: 6
