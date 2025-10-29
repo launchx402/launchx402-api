@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "x402 Test API",
-  description: "A test API endpoint for demonstrating the x402 payment protocol on Solana",
+  title: "LaunchX402 - Launch Pump.fun Tokens",
+  description: "Launch Pump.fun tokens instantly with crypto payments via x402 protocol",
 };
 
 export default function RootLayout({

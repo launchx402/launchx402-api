@@ -1,7 +1,7 @@
 {
-  "name": "x402-test-api",
+  "name": "launchx402-api",
   "version": "1.0.0",
-  "description": "A test API endpoint demonstrating the x402 payment protocol on Solana",
+  "description": "Launch Pump.fun tokens with crypto payments via x402 protocol",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -15,10 +15,15 @@
     "payment",
     "api",
     "usdc",
-    "blockchain"
+    "blockchain",
+    "pumpfun",
+    "token",
+    "launch"
   ],
   "dependencies": {
     "@payai/x402-solana": "latest",
+    "@solana/web3.js": "^1.95.8",
+    "bs58": "^6.0.0",
     "next": "16.0.0",
     "react": "19.2.0",
     "react-dom": "19.2.0"
