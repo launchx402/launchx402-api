@@ -31,6 +31,15 @@ if (!BASE_URL.startsWith('http://') && !BASE_URL.startsWith('https://')) {
 // PumpPortal API Key
 const PUMP_PORTAL_API_KEY = process.env.PUMP_PORTAL_API_KEY || '';
 
+// CORS headers helper
+const corsHeaders = {
+  'Content-Type': 'application/json',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, X-PAYMENT, Authorization, access-control-expose-headers',
+  'Access-Control-Expose-Headers': 'X-PAYMENT, WWW-Authenticate, X-Payment-Required',
+};
+
 export async function POST(req: NextRequest) {
   try {
     // 1. Extract payment header
@@ -123,12 +132,7 @@ export async function POST(req: NextRequest) {
       const response = x402.create402Response(paymentRequirements);
       return NextResponse.json(response.body, { 
         status: response.status,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, X-PAYMENT',
-        }
+        headers: corsHeaders
       });
     }
 
@@ -137,7 +141,7 @@ export async function POST(req: NextRequest) {
     if (!verified) {
       return NextResponse.json(
         { error: 'Invalid payment', success: false }, 
-        { status: 402 }
+        { status: 402, headers: corsHeaders }
       );
     }
 
@@ -168,7 +172,7 @@ export async function POST(req: NextRequest) {
           success: false,
           required: ['imageUrl', 'name', 'symbol', 'description']
         }, 
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -178,7 +182,7 @@ export async function POST(req: NextRequest) {
     } catch {
       return NextResponse.json(
         { error: 'Invalid image URL', success: false }, 
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -187,7 +191,7 @@ export async function POST(req: NextRequest) {
       console.error('PUMP_PORTAL_API_KEY not configured');
       return NextResponse.json(
         { error: 'Service configuration error', success: false }, 
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
@@ -200,7 +204,7 @@ export async function POST(req: NextRequest) {
     if (!imageResponse.ok) {
       return NextResponse.json(
         { error: 'Failed to fetch image from URL', success: false }, 
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
     const imageBlob = await imageResponse.blob();
@@ -231,7 +235,7 @@ export async function POST(req: NextRequest) {
           success: false,
           details: errorText
         }, 
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
@@ -270,7 +274,7 @@ export async function POST(req: NextRequest) {
           success: false,
           details: errorText
         }, 
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
@@ -297,11 +301,7 @@ export async function POST(req: NextRequest) {
     };
 
     return NextResponse.json(result, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, X-PAYMENT',
-      }
+      headers: corsHeaders
     });
 
   } catch (error) {
@@ -312,7 +312,7 @@ export async function POST(req: NextRequest) {
         success: false,
         message: error instanceof Error ? error.message : 'Unknown error'
       }, 
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
@@ -322,9 +322,8 @@ export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-PAYMENT',
+      ...corsHeaders,
+      'Access-Control-Max-Age': '86400',
     },
   });
 }
