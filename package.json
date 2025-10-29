@@ -21,7 +21,7 @@
     "launch"
   ],
   "dependencies": {
-    "@payai/x402-solana": "latest",
+    "@payai/x402-solana": "^0.1.0",
     "@solana/web3.js": "^1.95.8",
     "bs58": "^6.0.0",
     "next": "16.0.0",
