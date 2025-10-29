@@ -6,7 +6,7 @@ Launch Pump.fun tokens instantly using the x402 payment protocol.
 
 **POST** `/api/create`
 
-**Cost:** $0.10 USDC
+**Cost:** $1.00 USDC (includes initial buy + gas fees!)
 
 ## Description
 

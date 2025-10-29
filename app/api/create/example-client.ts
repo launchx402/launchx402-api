@@ -256,7 +256,7 @@ export function TokenCreator() {
   return (
     <div>
       <button onClick={handleCreateToken} disabled={loading || !wallet}>
-        {loading ? 'Creating Token...' : 'Launch Token ($0.10 USDC)'}
+        {loading ? 'Creating Token...' : 'Launch Token ($1.00 USDC)'}
       </button>
       
       {error && <div className="error">{error}</div>}

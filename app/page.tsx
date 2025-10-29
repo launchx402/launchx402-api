@@ -35,7 +35,7 @@ export default function Home() {
           </p>
           
           <div style={{ marginBottom: '15px' }}>
-            <strong>Cost:</strong> <span style={{ color: '#0066cc' }}>$0.10 USDC</span>
+            <strong>Cost:</strong> <span style={{ color: '#0066cc' }}>$1.00 USDC</span>
           </div>
 
           <div style={{ marginBottom: '15px' }}>
@@ -43,7 +43,7 @@ export default function Home() {
           </div>
 
           <div style={{ marginBottom: '15px' }}>
-            <strong>Initial Buy:</strong> 0.02 SOL (fixed)
+            <strong>Initial Buy:</strong> 0.02 SOL (included, we cover this!)
           </div>
 
           <div>
