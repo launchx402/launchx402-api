@@ -31,21 +31,39 @@ if (!BASE_URL.startsWith('http://') && !BASE_URL.startsWith('https://')) {
 // PumpPortal API Key
 const PUMP_PORTAL_API_KEY = process.env.PUMP_PORTAL_API_KEY || '';
 
-// Vanity address suffix (default: 402)
-const VANITY_SUFFIX = process.env.VANITY_SUFFIX || '402';
+// Vanity address suffix (default: empty = disabled)
+const VANITY_SUFFIX = process.env.VANITY_SUFFIX || '';
 
 // Function to generate vanity keypair ending in specified suffix
-function generateVanityKeypair(suffix: string): Keypair {
+function generateVanityKeypair(suffix: string, maxAttempts: number = 100000): Keypair {
+  if (!suffix) {
+    // If no suffix specified, just return random keypair
+    return Keypair.generate();
+  }
+
+  // Validate suffix contains only Base58 characters
+  // Base58 alphabet: 123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz
+  // NOTE: Excludes 0, O, I, l to avoid confusion
+  const base58Regex = /^[1-9A-HJ-NP-Za-km-z]+$/;
+  if (!base58Regex.test(suffix)) {
+    console.error(`Invalid vanity suffix "${suffix}": Must only contain Base58 characters (excludes 0, O, I, l)`);
+    console.error(`Valid characters: 123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz`);
+    console.warn(`Using random keypair instead.`);
+    return Keypair.generate();
+  }
+
   console.log(`Searching for keypair ending in "${suffix}"...`);
   let attempts = 0;
+  const startTime = Date.now();
   
-  while (true) {
+  while (attempts < maxAttempts) {
     attempts++;
     const keypair = Keypair.generate();
     const publicKey = keypair.publicKey.toString();
     
     if (publicKey.endsWith(suffix)) {
-      console.log(`Found vanity address after ${attempts} attempts!`);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(`Found vanity address after ${attempts} attempts in ${duration}s!`);
       console.log(`Public Key: ${publicKey}`);
       return keypair;
     }
@@ -55,6 +73,10 @@ function generateVanityKeypair(suffix: string): Keypair {
       console.log(`Checked ${attempts} keypairs...`);
     }
   }
+  
+  // Max attempts reached, fall back to random keypair
+  console.warn(`Could not find vanity address ending in "${suffix}" after ${maxAttempts} attempts. Using random keypair.`);
+  return Keypair.generate();
 }
 
 // CORS headers helper

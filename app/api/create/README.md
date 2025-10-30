@@ -220,8 +220,10 @@ NEXT_PUBLIC_BASE_URL=https://api.launchx402.fun
 # PumpPortal API Key (REQUIRED)
 PUMP_PORTAL_API_KEY=your_pumpportal_api_key
 
-# Vanity Address (OPTIONAL)
-VANITY_SUFFIX=402  # Mint addresses will end with this suffix (default: 402)
+# Vanity Address (OPTIONAL - Leave empty to disable)
+# VANITY_SUFFIX=XYZ  # Mint addresses will end with this suffix
+# NOTE: Must use Base58 characters only (123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz)
+# EXCLUDES: 0 (zero), O (capital o), I (capital i), l (lowercase L)
 ```
 
 ### Getting a PumpPortal API Key
@@ -245,8 +247,9 @@ VANITY_SUFFIX=402  # Mint addresses will end with this suffix (default: 402)
    - Returns metadata URI for token
 
 3. **Mint Keypair Generation**
-   - Vanity keypair generated with configured suffix (default: 402)
-   - System searches for keypair ending in specified suffix
+   - Random keypair generated for token mint (or vanity if VANITY_SUFFIX is set)
+   - If vanity is enabled, searches up to 100,000 attempts
+   - Falls back to random keypair if vanity not found
    - Private key encoded with bs58
 
 4. **PumpPortal Transaction**
