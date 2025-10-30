@@ -219,6 +219,9 @@ NEXT_PUBLIC_BASE_URL=https://api.launchx402.fun
 
 # PumpPortal API Key (REQUIRED)
 PUMP_PORTAL_API_KEY=your_pumpportal_api_key
+
+# Vanity Address (OPTIONAL)
+VANITY_SUFFIX=402  # Mint addresses will end with this suffix (default: 402)
 ```
 
 ### Getting a PumpPortal API Key
@@ -242,7 +245,8 @@ PUMP_PORTAL_API_KEY=your_pumpportal_api_key
    - Returns metadata URI for token
 
 3. **Mint Keypair Generation**
-   - Random Solana keypair generated for token mint
+   - Vanity keypair generated with configured suffix (default: 402)
+   - System searches for keypair ending in specified suffix
    - Private key encoded with bs58
 
 4. **PumpPortal Transaction**

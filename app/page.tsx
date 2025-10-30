@@ -13,13 +13,14 @@ export default function Home() {
           LaunchX402
         </h1>
         <p style={{ fontSize: '1.2rem', color: '#666', marginBottom: '0' }}>
-          Launch Pump.fun tokens instantly with crypto payments
+          Launch Pump.fun tokens instantly with x402 crypto payments
         </p>
       </header>
 
       <section style={{ marginBottom: '50px' }}>
-        <h2 style={{ fontSize: '1.8rem', fontWeight: '600', marginBottom: '20px' }}>API Endpoint</h2>
+        <h2 style={{ fontSize: '1.8rem', fontWeight: '600', marginBottom: '20px' }}>API Endpoints</h2>
         
+        {/* Create Token Endpoint */}
         <div style={{ 
           background: '#f8f9fa', 
           border: '1px solid #e0e0e0',
@@ -67,6 +68,39 @@ export default function Home() {
             </ul>
           </div>
         </div>
+
+        {/* Health Endpoint */}
+        <div style={{ 
+          background: '#f0f8ff', 
+          border: '1px solid #b3d9ff',
+          padding: '25px', 
+          borderRadius: '8px', 
+          marginBottom: '20px' 
+        }}>
+          <h3 style={{ marginTop: '0', fontSize: '1.3rem', fontWeight: '600' }}>
+            GET /api/health
+          </h3>
+          <p style={{ color: '#666', marginBottom: '15px' }}>
+            Check API health and status
+          </p>
+          
+          <div style={{ marginBottom: '15px' }}>
+            <strong>Cost:</strong> <span style={{ color: '#28a745' }}>FREE</span>
+          </div>
+
+          <div style={{ marginBottom: '15px' }}>
+            <strong>Method:</strong> GET
+          </div>
+
+          <div>
+            <strong>Returns:</strong>
+            <ul style={{ marginTop: '10px', color: '#555' }}>
+              <li>Service status</li>
+              <li>Current timestamp</li>
+              <li>Service version</li>
+            </ul>
+          </div>
+        </div>
       </section>
 
       <section style={{ marginBottom: '50px' }}>
@@ -81,7 +115,9 @@ export default function Home() {
       </section>
 
       <section style={{ marginBottom: '50px' }}>
-        <h2 style={{ fontSize: '1.8rem', fontWeight: '600', marginBottom: '20px' }}>Example Request</h2>
+        <h2 style={{ fontSize: '1.8rem', fontWeight: '600', marginBottom: '20px' }}>Example Requests</h2>
+        
+        <h3 style={{ fontSize: '1.3rem', fontWeight: '600', marginBottom: '15px' }}>Create Token</h3>
         <pre style={{ 
           background: '#1e1e1e', 
           color: '#d4d4d4', 
@@ -89,7 +125,8 @@ export default function Home() {
           borderRadius: '6px', 
           overflow: 'auto',
           fontSize: '0.9rem',
-          border: '1px solid #333'
+          border: '1px solid #333',
+          marginBottom: '30px'
         }}>
 {`curl -X POST https://api.launchx402.fun/api/create \\
   -H "Content-Type: application/json" \\
@@ -101,6 +138,19 @@ export default function Home() {
     "twitter": "https://x.com/mytoken",
     "website": "https://mytoken.com"
   }'`}
+        </pre>
+
+        <h3 style={{ fontSize: '1.3rem', fontWeight: '600', marginBottom: '15px' }}>Health Check</h3>
+        <pre style={{ 
+          background: '#1e1e1e', 
+          color: '#d4d4d4', 
+          padding: '20px', 
+          borderRadius: '6px', 
+          overflow: 'auto',
+          fontSize: '0.9rem',
+          border: '1px solid #333'
+        }}>
+{`curl https://api.launchx402.fun/api/health`}
         </pre>
       </section>
 

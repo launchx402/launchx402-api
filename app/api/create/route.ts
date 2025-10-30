@@ -31,6 +31,32 @@ if (!BASE_URL.startsWith('http://') && !BASE_URL.startsWith('https://')) {
 // PumpPortal API Key
 const PUMP_PORTAL_API_KEY = process.env.PUMP_PORTAL_API_KEY || '';
 
+// Vanity address suffix (default: 402)
+const VANITY_SUFFIX = process.env.VANITY_SUFFIX || '402';
+
+// Function to generate vanity keypair ending in specified suffix
+function generateVanityKeypair(suffix: string): Keypair {
+  console.log(`Searching for keypair ending in "${suffix}"...`);
+  let attempts = 0;
+  
+  while (true) {
+    attempts++;
+    const keypair = Keypair.generate();
+    const publicKey = keypair.publicKey.toString();
+    
+    if (publicKey.endsWith(suffix)) {
+      console.log(`Found vanity address after ${attempts} attempts!`);
+      console.log(`Public Key: ${publicKey}`);
+      return keypair;
+    }
+    
+    // Log progress every 5000 attempts
+    if (attempts % 5000 === 0) {
+      console.log(`Checked ${attempts} keypairs...`);
+    }
+  }
+}
+
 // CORS headers helper
 const corsHeaders = {
   'Content-Type': 'application/json',
@@ -195,8 +221,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate a random keypair for token mint
-    const mintKeypair = Keypair.generate();
+    // Generate a vanity keypair for token mint (ending in configured suffix)
+    const mintKeypair = generateVanityKeypair(VANITY_SUFFIX);
 
     // Fetch the image from the URL
     console.log('Fetching image from URL:', imageUrl);
