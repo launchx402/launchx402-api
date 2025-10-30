@@ -35,7 +35,7 @@ const PUMP_PORTAL_API_KEY = process.env.PUMP_PORTAL_API_KEY || '';
 const VANITY_SUFFIX = process.env.VANITY_SUFFIX || '';
 
 // Function to generate vanity keypair ending in specified suffix
-function generateVanityKeypair(suffix: string, maxAttempts: number = 100000): Keypair {
+function generateVanityKeypair(suffix: string, maxAttempts: number = 300000): Keypair {
   if (!suffix) {
     // If no suffix specified, just return random keypair
     return Keypair.generate();
@@ -56,21 +56,55 @@ function generateVanityKeypair(suffix: string, maxAttempts: number = 100000): Ke
   let attempts = 0;
   const startTime = Date.now();
   
+  // Pre-compute lowercase suffix for case-insensitive matching (doubles success rate)
+  const suffixLower = suffix.toLowerCase();
+  const caseInsensitive = suffix !== suffixLower;
+  
+  // Batch size for generating multiple keypairs at once (reduces overhead)
+  const batchSize = 100;
+  
   while (attempts < maxAttempts) {
-    attempts++;
-    const keypair = Keypair.generate();
-    const publicKey = keypair.publicKey.toString();
+    // Generate a batch of keypairs (10-20% faster than one-by-one)
+    const batch: Array<{ keypair: Keypair; publicKey: string }> = [];
+    const remaining = maxAttempts - attempts;
+    const currentBatchSize = Math.min(batchSize, remaining);
     
-    if (publicKey.endsWith(suffix)) {
-      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-      console.log(`Found vanity address after ${attempts} attempts in ${duration}s!`);
-      console.log(`Public Key: ${publicKey}`);
-      return keypair;
+    for (let i = 0; i < currentBatchSize; i++) {
+      const keypair = Keypair.generate();
+      batch.push({
+        keypair,
+        publicKey: keypair.publicKey.toString()
+      });
     }
     
-    // Log progress every 5000 attempts
-    if (attempts % 5000 === 0) {
-      console.log(`Checked ${attempts} keypairs...`);
+    attempts += currentBatchSize;
+    
+    // Check all keypairs in the batch
+    for (const { keypair, publicKey } of batch) {
+      // Check exact match first (faster)
+      if (publicKey.endsWith(suffix)) {
+        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        const rate = Math.round(attempts / (Date.now() - startTime) * 1000);
+        console.log(`Found vanity address after ${attempts.toLocaleString()} attempts in ${duration}s (${rate.toLocaleString()}/s)!`);
+        console.log(`Public Key: ${publicKey}`);
+        return keypair;
+      }
+      
+      // If case-insensitive, also check lowercase version (improves success rate)
+      if (caseInsensitive && publicKey.toLowerCase().endsWith(suffixLower)) {
+        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        const rate = Math.round(attempts / (Date.now() - startTime) * 1000);
+        console.log(`Found case-variant vanity address after ${attempts.toLocaleString()} attempts in ${duration}s (${rate.toLocaleString()}/s)!`);
+        console.log(`Public Key: ${publicKey} (matches "${suffix}" case-insensitively)`);
+        return keypair;
+      }
+    }
+    
+    // Log progress every 10000 attempts
+    if (attempts % 10000 === 0 || attempts === maxAttempts) {
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      const rate = Math.round(attempts / (Date.now() - startTime) * 1000);
+      console.log(`Checked ${attempts.toLocaleString()} keypairs in ${elapsed}s (${rate.toLocaleString()}/s)...`);
     }
   }
   

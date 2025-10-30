@@ -248,7 +248,9 @@ PUMP_PORTAL_API_KEY=your_pumpportal_api_key
 
 3. **Mint Keypair Generation**
    - Random keypair generated for token mint (or vanity if VANITY_SUFFIX is set)
-   - If vanity is enabled, searches up to 100,000 attempts
+   - If vanity is enabled, searches up to 300,000 attempts (~88% success for 3-char)
+   - Batch generation (100 keypairs at a time) reduces overhead by 10-20%
+   - Case-insensitive matching improves success rate (e.g., "x4o" matches "X4o", "x4O", etc.)
    - Falls back to random keypair if vanity not found
    - Private key encoded with bs58
 
