@@ -186,17 +186,41 @@ Token creation failed:
 }
 ```
 
+Transaction failed on-chain (e.g., insufficient funds):
+```json
+{
+  "error": "Transaction failed",
+  "success": false,
+  "message": "Insufficient funds in wallet to cover transaction. Please add SOL to your PumpPortal wallet and try again.",
+  "signature": "3x7K...",
+  "solscanUrl": "https://solscan.io/tx/3x7K...",
+  "details": { "InstructionError": [...] }
+}
+```
+
+Transaction not found on network:
+```json
+{
+  "error": "Transaction verification failed",
+  "success": false,
+  "message": "Transaction not found on Solana network. Please try again.",
+  "signature": "3x7K..."
+}
+```
+
 ## Payment Flow
 
 1. **Initial Request** - Client sends POST request without payment
 2. **402 Response** - Server returns payment requirements
 3. **Payment** - Client creates and signs USDC payment transaction
 4. **Retry Request** - Client sends same request with `X-PAYMENT` header
-5. **Verification** - Server verifies payment with x402 facilitator
+5. **Payment Verification** - Server verifies payment with x402 facilitator
 6. **Token Creation** - Server creates token metadata on IPFS
-7. **Token Launch** - Server submits token creation transaction via PumpPortal
-8. **Payment Settlement** - Server settles payment with facilitator
-9. **Success Response** - Server returns transaction details
+7. **Vanity Generation** - Server generates vanity keypair (if enabled)
+8. **Token Launch** - Server submits token creation transaction via PumpPortal
+9. **On-Chain Verification** - Server verifies transaction succeeded on Solana
+10. **Payment Settlement** - Server settles payment (only if transaction succeeded)
+11. **Success Response** - Server returns transaction details
 
 ## Configuration
 
@@ -221,9 +245,12 @@ NEXT_PUBLIC_BASE_URL=https://api.launchx402.fun
 PUMP_PORTAL_API_KEY=your_pumpportal_api_key
 
 # Vanity Address (OPTIONAL - Leave empty to disable)
-# VANITY_SUFFIX=XYZ  # Mint addresses will end with this suffix
+# VANITY_SUFFIX=4o2  # Mint addresses will end with this suffix (recommend 2-3 chars)
 # NOTE: Must use Base58 characters only (123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz)
 # EXCLUDES: 0 (zero), O (capital o), I (capital i), l (lowercase L)
+
+# Vanity Worker Threads (OPTIONAL)
+# VANITY_USE_WORKERS=true  # Enable multi-core generation (default: true, 4-8x faster)
 ```
 
 ### Getting a PumpPortal API Key
@@ -248,7 +275,9 @@ PUMP_PORTAL_API_KEY=your_pumpportal_api_key
 
 3. **Mint Keypair Generation**
    - Random keypair generated for token mint (or vanity if VANITY_SUFFIX is set)
-   - If vanity is enabled, searches up to 300,000 attempts (~88% success for 3-char)
+   - If vanity is enabled with workers: up to 1,000,000 attempts (~99.5% success for 3-char)
+   - If single-threaded: up to 300,000 attempts (~88% success for 3-char)
+   - **Multi-core worker threads** (4-8x speedup on multi-core CPUs)
    - Batch generation (100 keypairs at a time) reduces overhead by 10-20%
    - Case-insensitive matching improves success rate (e.g., "x4o" matches "X4o", "x4O", etc.)
    - Falls back to random keypair if vanity not found
@@ -259,9 +288,12 @@ PUMP_PORTAL_API_KEY=your_pumpportal_api_key
    - Includes initial SOL buy amount
    - Configurable slippage and priority fee
 
-5. **Transaction Execution**
-   - PumpPortal executes token creation on-chain
-   - Returns transaction signature
+5. **On-Chain Verification**
+   - Transaction signature verified on Solana network
+   - Checks if transaction actually succeeded
+   - Detects common failures (insufficient funds, slippage, etc.)
+   - Returns detailed error messages if transaction failed
+   - Payment only settled after successful verification
 
 ### Network Support
 

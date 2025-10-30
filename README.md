@@ -253,6 +253,7 @@ launchx402-api/
 | `FACILITATOR_URL` | x402 facilitator URL | Yes |
 | `NEXT_PUBLIC_BASE_URL` | Your API's base URL | Yes |
 | `VANITY_SUFFIX` | Vanity address suffix for token mints (optional, must use Base58 chars only: excludes 0, O, I, l) | No |
+| `VANITY_USE_WORKERS` | Enable multi-core vanity generation (default: `true`, 4-8x faster) | No |
 | `NEXT_PUBLIC_SOLANA_RPC_DEVNET` | Custom RPC endpoint (optional) | No |
 | `NEXT_PUBLIC_SOLANA_RPC_MAINNET` | Custom RPC endpoint (optional) | No |
 

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { X402PaymentHandler } from '@payai/x402-solana/server';
-import { Keypair } from '@solana/web3.js';
+import { Keypair, Connection } from '@solana/web3.js';
 import bs58 from 'bs58';
+import { Worker } from 'worker_threads';
+import * as os from 'os';
+import * as path from 'path';
 
 // USDC Mint Addresses
 const USDC_MINT_DEVNET = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
@@ -34,7 +37,100 @@ const PUMP_PORTAL_API_KEY = process.env.PUMP_PORTAL_API_KEY || '';
 // Vanity address suffix (default: empty = disabled)
 const VANITY_SUFFIX = process.env.VANITY_SUFFIX || '';
 
-// Function to generate vanity keypair ending in specified suffix
+// Enable multi-threaded vanity generation (default: true)
+const USE_WORKERS = process.env.VANITY_USE_WORKERS !== 'false';
+
+// Function to generate vanity keypair using worker threads (multi-core)
+async function generateVanityKeypairWithWorkers(suffix: string, maxAttempts: number = 1000000): Promise<Keypair> {
+  const suffixLower = suffix.toLowerCase();
+  const caseInsensitive = suffix !== suffixLower;
+  
+  // Determine number of workers (use CPU cores, max 8)
+  const numCores = os.cpus().length;
+  const numWorkers = Math.min(numCores, 8);
+  const attemptsPerWorker = Math.ceil(maxAttempts / numWorkers);
+  
+  console.log(`Spawning ${numWorkers} workers for parallel vanity search...`);
+  const startTime = Date.now();
+  
+  return new Promise((resolve, reject) => {
+    const workers: Worker[] = [];
+    let completed = 0;
+    let totalAttempts = 0;
+    let found = false;
+    
+    // Create workers
+    for (let i = 0; i < numWorkers; i++) {
+      const workerPath = path.join(process.cwd(), 'app', 'api', 'create', 'vanity-worker.js');
+      
+      const worker = new Worker(workerPath, {
+        workerData: {
+          suffix,
+          suffixLower,
+          caseInsensitive,
+          maxAttempts: attemptsPerWorker
+        }
+      });
+      
+      workers.push(worker);
+      
+      worker.on('message', (msg) => {
+        if (found) return; // Already found a match
+        
+        if (msg.found) {
+          found = true;
+          totalAttempts += msg.attempts;
+          
+          // Terminate all workers
+          workers.forEach(w => w.terminate());
+          
+          // Reconstruct keypair from secret key
+          const keypair = Keypair.fromSecretKey(new Uint8Array(msg.keypair));
+          
+          const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+          const rate = Math.round(totalAttempts / (Date.now() - startTime) * 1000);
+          
+          if (msg.exactMatch) {
+            console.log(`Found vanity address after ${totalAttempts.toLocaleString()} attempts in ${duration}s (${rate.toLocaleString()}/s)!`);
+          } else {
+            console.log(`Found case-variant vanity address after ${totalAttempts.toLocaleString()} attempts in ${duration}s (${rate.toLocaleString()}/s)!`);
+          }
+          console.log(`Public Key: ${msg.publicKey}`);
+          
+          resolve(keypair);
+        } else if (msg.completed) {
+          completed++;
+          totalAttempts += msg.attempts;
+          
+          if (completed === numWorkers) {
+            // All workers finished without finding a match
+            workers.forEach(w => w.terminate());
+            
+            console.warn(`Could not find vanity address ending in "${suffix}" after ${totalAttempts.toLocaleString()} attempts. Using random keypair.`);
+            resolve(Keypair.generate());
+          }
+        } else {
+          // Progress update
+          totalAttempts += 5000; // Approximate based on progress reports
+        }
+      });
+      
+      worker.on('error', (error) => {
+        console.error('Worker error:', error);
+        workers.forEach(w => w.terminate());
+        reject(error);
+      });
+      
+      worker.on('exit', (code) => {
+        if (code !== 0 && !found) {
+          console.error(`Worker stopped with exit code ${code}`);
+        }
+      });
+    }
+  });
+}
+
+// Function to generate vanity keypair ending in specified suffix (single-threaded fallback)
 function generateVanityKeypair(suffix: string, maxAttempts: number = 300000): Keypair {
   if (!suffix) {
     // If no suffix specified, just return random keypair
@@ -111,6 +207,38 @@ function generateVanityKeypair(suffix: string, maxAttempts: number = 300000): Ke
   // Max attempts reached, fall back to random keypair
   console.warn(`Could not find vanity address ending in "${suffix}" after ${maxAttempts} attempts. Using random keypair.`);
   return Keypair.generate();
+}
+
+// Main vanity generation function (chooses between workers and single-threaded)
+async function generateVanityKeypairAsync(suffix: string, maxAttempts: number = 1000000): Promise<Keypair> {
+  if (!suffix) {
+    return Keypair.generate();
+  }
+
+  // Validate suffix contains only Base58 characters
+  const base58Regex = /^[1-9A-HJ-NP-Za-km-z]+$/;
+  if (!base58Regex.test(suffix)) {
+    console.error(`Invalid vanity suffix "${suffix}": Must only contain Base58 characters (excludes 0, O, I, l)`);
+    console.error(`Valid characters: 123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz`);
+    console.warn(`Using random keypair instead.`);
+    return Keypair.generate();
+  }
+
+  // Use workers if enabled and suffix is 3+ characters (worth the overhead)
+  if (USE_WORKERS && suffix.length >= 3) {
+    try {
+      return await generateVanityKeypairWithWorkers(suffix, maxAttempts);
+    } catch (error) {
+      console.error('Worker-based generation failed, falling back to single-threaded:', error);
+      // Use lower limit for single-threaded fallback
+      return generateVanityKeypair(suffix, 300000);
+    }
+  } else {
+    // Use single-threaded for short suffixes or if workers disabled
+    // Use lower limit since single-threaded is slower
+    const singleThreadedMax = Math.min(maxAttempts, 300000);
+    return generateVanityKeypair(suffix, singleThreadedMax);
+  }
 }
 
 // CORS headers helper
@@ -278,7 +406,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate a vanity keypair for token mint (ending in configured suffix)
-    const mintKeypair = generateVanityKeypair(VANITY_SUFFIX);
+    const mintKeypair = await generateVanityKeypairAsync(VANITY_SUFFIX);
 
     // Fetch the image from the URL
     console.log('Fetching image from URL:', imageUrl);
@@ -361,9 +489,78 @@ export async function POST(req: NextRequest) {
     }
 
     const createData = await createResponse.json();
-    console.log('Token created successfully:', createData);
+    console.log('PumpPortal response:', createData);
 
-    // 5. Settle payment
+    // Verify the transaction actually succeeded on-chain
+    if (createData.signature) {
+      console.log('Verifying transaction on-chain:', createData.signature);
+      
+      try {
+        // Connect to Solana RPC
+        const rpcUrl = IS_MAINNET 
+          ? process.env.NEXT_PUBLIC_SOLANA_RPC_MAINNET || 'https://api.mainnet-beta.solana.com'
+          : process.env.NEXT_PUBLIC_SOLANA_RPC_DEVNET || 'https://api.devnet.solana.com';
+        
+        const connection = new Connection(rpcUrl, 'confirmed');
+        
+        // Wait a moment for transaction to propagate
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Get transaction details
+        const txDetails = await connection.getTransaction(createData.signature, {
+          maxSupportedTransactionVersion: 0,
+          commitment: 'confirmed'
+        });
+
+        if (!txDetails) {
+          console.error('Transaction not found on-chain:', createData.signature);
+          return NextResponse.json(
+            { 
+              error: 'Transaction verification failed', 
+              success: false,
+              message: 'Transaction not found on Solana network. Please try again.',
+              signature: createData.signature
+            }, 
+            { status: 500, headers: corsHeaders }
+          );
+        }
+
+        // Check if transaction succeeded
+        if (txDetails.meta?.err) {
+          console.error('Transaction failed on-chain:', txDetails.meta.err);
+          
+          // Provide helpful error message
+          let errorMessage = 'Token creation transaction failed on-chain.';
+          const errString = JSON.stringify(txDetails.meta.err);
+          
+          if (errString.includes('insufficient')) {
+            errorMessage = 'Insufficient funds in wallet to cover transaction. Please add SOL to your PumpPortal wallet and try again.';
+          } else if (errString.includes('slippage')) {
+            errorMessage = 'Transaction failed due to slippage. Try increasing slippage tolerance.';
+          }
+          
+          return NextResponse.json(
+            { 
+              error: 'Transaction failed', 
+              success: false,
+              message: errorMessage,
+              signature: createData.signature,
+              solscanUrl: `https://solscan.io/tx/${createData.signature}`,
+              details: txDetails.meta.err
+            }, 
+            { status: 500, headers: corsHeaders }
+          );
+        }
+
+        console.log('Transaction verified successfully on-chain!');
+      } catch (verifyError) {
+        console.error('Error verifying transaction:', verifyError);
+        // Continue anyway, as PumpPortal returned success
+        console.warn('Could not verify transaction, but PumpPortal reported success. Proceeding...');
+      }
+    }
+
+    // 5. Settle payment (only after transaction verified)
     await x402.settlePayment(paymentHeader, paymentRequirements);
 
     // 6. Return success response
