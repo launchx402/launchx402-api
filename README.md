@@ -2,13 +2,13 @@
 
 > Launch Pump.fun tokens with crypto payments via the x402 protocol
 
-LaunchX402 is a production-ready API that enables anyone to create and launch tokens on Pump.fun using USDC payments through the x402 payment protocol. Pay $1.00 USDC per token launch (initial buy included!).
+LaunchX402 is a production-ready API that enables anyone to create and launch tokens on Pump.fun using USDC payments through the x402 payment protocol. Pay $2.00 USDC per token launch (initial buy included!).
 
 🔗 **Live API:** [api.launchx402.fun](https://api.launchx402.fun)
 
 ## Features
 
-- ✅ **Pay-per-use** - $1.00 USDC per token creation (initial buy included)
+- ✅ **Pay-per-use** - $2.00 USDC per token creation (initial buy included)
 - ✅ **Instant launches** - Tokens deployed to Pump.fun in seconds
 - ✅ **x402 protocol** - Decentralized, trustless payments
 - ✅ **Zero setup** - No API keys or accounts needed (for consumers)
@@ -34,7 +34,7 @@ import { createX402Client } from '@payai/x402-solana/client';
 const client = createX402Client({
   wallet: yourSolanaWallet,
   network: 'solana-devnet',
-  maxPaymentAmount: BigInt(1_000_000),
+  maxPaymentAmount: BigInt(2_000_000),
 });
 
 const response = await client.fetch('https://api.launchx402.fun/api/create', {
@@ -63,10 +63,10 @@ POST https://api.launchx402.fun/api/create
 
 ### Cost
 
-- **Total Cost:** $1.00 USDC (via x402 protocol)
-  - Includes initial buy (0.02 SOL) - we cover this!
+- **Total Cost:** $2.00 USDC (via x402 protocol)
+  - Includes initial buy (0.01 SOL) - we cover this!
   - Includes gas fees (~0.0005 SOL) - we cover this too!
-- **You Pay:** Just $1.00 USDC, nothing else!
+- **You Pay:** Just $2.00 USDC, nothing else!
 
 ### Request Body
 
@@ -98,7 +98,7 @@ POST https://api.launchx402.fun/api/create
     name: "My Token",
     symbol: "MTK",
     description: "An amazing token on Solana",
-    initialBuy: "0.02 SOL"
+    initialBuy: "0.01 SOL"
   }
 }
 ```
@@ -200,7 +200,7 @@ const requirements = await fetch('https://api.launchx402.fun/api/create', {
 
 // Returns 402 with payment details
 const payment = await requirements.json();
-console.log('Cost: $1.00 USDC (includes everything!)');
+console.log('Cost: $2.00 USDC (includes everything!)');
 ```
 
 More examples: [`app/api/create/example-client.ts`](./app/api/create/example-client.ts)
@@ -296,7 +296,7 @@ The API supports both Solana networks:
 ## FAQ
 
 **Q: How much does it cost to use the API?**  
-A: Just $1.00 USDC per token launch. We cover the initial buy (0.02 SOL) and gas fees!
+A: Just $2.00 USDC per token launch. We cover the initial buy (0.01 SOL) and gas fees!
 
 **Q: Do I need an API key?**  
 A: No! The API uses the x402 protocol for payments. Just pay with USDC.
@@ -308,7 +308,7 @@ A: Solana devnet (testing) and mainnet (production).
 A: All tokens are deployed to [Pump.fun](https://pump.fun).
 
 **Q: Do I need SOL in my wallet?**  
-A: No! We cover the initial buy and gas fees. You only need $1.00 USDC.
+A: No! We cover the initial buy and gas fees. You only need $2.00 USDC.
 
 **Q: How do I get devnet USDC for testing?**  
 A: Use a devnet USDC faucet or contact the team.

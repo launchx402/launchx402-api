@@ -6,7 +6,7 @@ Launch Pump.fun tokens instantly using the x402 payment protocol.
 
 **POST** `/api/create`
 
-**Cost:** $1.00 USDC (includes initial buy + gas fees!)
+**Cost:** $2.00 USDC (includes initial buy + gas fees!)
 
 ## Description
 
@@ -16,7 +16,7 @@ This endpoint allows you to create and launch new tokens on Pump.fun using the P
 
 **Content-Type:** `application/json`
 
-**Initial Buy:** 0.02 SOL (fixed amount for all launches)
+**Initial Buy:** 0.01 SOL (fixed amount for all launches)
 
 ### Required Parameters
 
@@ -316,7 +316,7 @@ Currently no rate limits enforced. Each request requires a new USDC payment.
    - Host on reliable services (Imgur, Cloudinary, IPFS, etc.)
 
 2. **Initial Buy Amount**
-   - Fixed at 0.02 SOL for all launches
+   - Fixed at 0.01 SOL for all launches
    - Provides basic initial liquidity
    - Plus gas fees (~0.0005 SOL)
 

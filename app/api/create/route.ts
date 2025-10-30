@@ -255,10 +255,10 @@ export async function POST(req: NextRequest) {
     // 1. Extract payment header
     const paymentHeader = x402.extractPayment(req.headers);
     
-    // 2. Create payment requirements - $1.00 USDC for token creation
+    // 2. Create payment requirements - $2.00 USDC for token creation
     const paymentRequirements = await x402.createPaymentRequirements({
       price: {
-        amount: "1000000",  // $1.00 USDC (in micro-units, as string)
+        amount: "2000000",  // $2.00 USDC (in micro-units, as string)
         asset: {
           address: USDC_MINT,
           decimals: 6
@@ -372,7 +372,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     // Fixed initial buy amount
-    const amount = 0.02; // Locked to 0.02 SOL
+    const amount = 0.01; // Locked to 0.01 SOL
 
     // Validate required fields
     if (!imageUrl || !name || !symbol || !description) {
@@ -586,7 +586,7 @@ export async function POST(req: NextRequest) {
         name,
         symbol,
         description,
-        initialBuy: '0.02 SOL'
+        initialBuy: '0.01 SOL'
       }
     };
 
