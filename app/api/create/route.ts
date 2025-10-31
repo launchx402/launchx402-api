@@ -40,17 +40,27 @@ const VANITY_SUFFIX = process.env.VANITY_SUFFIX || '';
 // Enable multi-threaded vanity generation (default: true)
 const USE_WORKERS = process.env.VANITY_USE_WORKERS !== 'false';
 
+// Track concurrent vanity generation requests for dynamic worker allocation
+let concurrentVanityRequests = 0;
+
 // Function to generate vanity keypair using worker threads (multi-core)
 async function generateVanityKeypairWithWorkers(suffix: string, maxAttempts: number = 1000000): Promise<Keypair> {
   const suffixLower = suffix.toLowerCase();
   const caseInsensitive = suffix !== suffixLower;
   
-  // Determine number of workers (use CPU cores, max 8)
+  // Increment concurrent request counter
+  concurrentVanityRequests++;
+  
+  // Determine number of workers (dynamically allocate based on concurrent load)
   const numCores = os.cpus().length;
-  const numWorkers = Math.min(numCores, 8);
+  const maxWorkers = Math.min(numCores, 28); // Reserve 4 cores for system
+  
+  // Divide available workers among concurrent requests
+  const workersPerRequest = Math.max(1, Math.floor(maxWorkers / concurrentVanityRequests));
+  const numWorkers = workersPerRequest;
   const attemptsPerWorker = Math.ceil(maxAttempts / numWorkers);
   
-  console.log(`Spawning ${numWorkers} workers for parallel vanity search...`);
+  console.log(`[Vanity ${concurrentVanityRequests}/${concurrentVanityRequests}] Spawning ${numWorkers} workers (${maxWorkers} cores ÷ ${concurrentVanityRequests} concurrent requests)...`);
   const startTime = Date.now();
   
   return new Promise((resolve, reject) => {
@@ -58,6 +68,18 @@ async function generateVanityKeypairWithWorkers(suffix: string, maxAttempts: num
     let completed = 0;
     let totalAttempts = 0;
     let found = false;
+    
+    // Helper to cleanup and decrement counter
+    const cleanup = (result: Keypair | Error) => {
+      concurrentVanityRequests--;
+      console.log(`[Vanity] Request completed. Active requests: ${concurrentVanityRequests}`);
+      
+      if (result instanceof Error) {
+        reject(result);
+      } else {
+        resolve(result);
+      }
+    };
     
     // Create workers
     for (let i = 0; i < numWorkers; i++) {
@@ -97,7 +119,7 @@ async function generateVanityKeypairWithWorkers(suffix: string, maxAttempts: num
           }
           console.log(`Public Key: ${msg.publicKey}`);
           
-          resolve(keypair);
+          cleanup(keypair);
         } else if (msg.completed) {
           completed++;
           totalAttempts += msg.attempts;
@@ -107,7 +129,7 @@ async function generateVanityKeypairWithWorkers(suffix: string, maxAttempts: num
             workers.forEach(w => w.terminate());
             
             console.warn(`Could not find vanity address ending in "${suffix}" after ${totalAttempts.toLocaleString()} attempts. Using random keypair.`);
-            resolve(Keypair.generate());
+            cleanup(Keypair.generate());
           }
         } else {
           // Progress update
@@ -118,7 +140,7 @@ async function generateVanityKeypairWithWorkers(suffix: string, maxAttempts: num
       worker.on('error', (error) => {
         console.error('Worker error:', error);
         workers.forEach(w => w.terminate());
-        reject(error);
+        cleanup(error);
       });
       
       worker.on('exit', (code) => {
@@ -419,8 +441,8 @@ export async function POST(req: NextRequest) {
     }
     const imageBlob = await imageResponse.blob();
 
-    // Create IPFS metadata storage
-    const metadataFormData = new FormData();
+    // Create IPFS metadata storage (let for retry recreation)
+    let metadataFormData = new FormData();
     metadataFormData.append('file', imageBlob, 'token-image.png');
     metadataFormData.append('name', name);
     metadataFormData.append('symbol', symbol);
@@ -431,30 +453,99 @@ export async function POST(req: NextRequest) {
     metadataFormData.append('showName', 'true');
 
     console.log('Creating IPFS metadata...');
-    const metadataResponse = await fetch('https://pump.fun/api/ipfs', {
-      method: 'POST',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Origin': 'https://pump.fun',
-        'Referer': 'https://pump.fun/',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-origin',
-      },
-      body: metadataFormData,
-    });
+    
+    // Retry logic for Cloudflare blocks
+    let metadataResponse;
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      
+      try {
+        metadataResponse = await fetch('https://pump.fun/api/ipfs', {
+          method: 'POST',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Accept': '*/*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br, zstd',
+            'Origin': 'https://pump.fun',
+            'Referer': 'https://pump.fun/',
+            'Sec-Ch-Ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"Windows"',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+          },
+          body: metadataFormData,
+        });
 
-    if (!metadataResponse.ok) {
-      const errorText = await metadataResponse.text();
-      console.error('IPFS metadata creation failed:', errorText);
+        // Check if we got a Cloudflare block page
+        const contentType = metadataResponse.headers.get('content-type');
+        if (metadataResponse.ok && contentType?.includes('application/json')) {
+          // Success!
+          break;
+        } else if (metadataResponse.status === 403 || metadataResponse.status === 503 || 
+                   (contentType?.includes('text/html') && !metadataResponse.ok)) {
+          // Likely Cloudflare block
+          console.warn(`Attempt ${attempts}/${maxAttempts}: Cloudflare block detected (status: ${metadataResponse.status})`);
+          
+          if (attempts < maxAttempts) {
+            // Wait before retry (exponential backoff)
+            const delay = Math.min(1000 * Math.pow(2, attempts - 1), 5000);
+            console.log(`Waiting ${delay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            
+            // Recreate FormData for retry (FormData can only be read once)
+            metadataFormData = new FormData();
+            metadataFormData.append('file', imageBlob, 'token-image.png');
+            metadataFormData.append('name', name);
+            metadataFormData.append('symbol', symbol);
+            metadataFormData.append('description', description);
+            if (twitter) metadataFormData.append('twitter', twitter);
+            if (telegram) metadataFormData.append('telegram', telegram);
+            if (website) metadataFormData.append('website', website);
+            metadataFormData.append('showName', 'true');
+            continue;
+          }
+        } else {
+          // Other error, don't retry
+          break;
+        }
+      } catch (error) {
+        console.error(`Attempt ${attempts}/${maxAttempts}: Network error:`, error);
+        if (attempts >= maxAttempts) {
+          throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    if (!metadataResponse || !metadataResponse.ok) {
+      const errorText = await metadataResponse?.text() || 'No response';
+      console.error('IPFS metadata creation failed after retries:', errorText.substring(0, 500));
+      
+      // Check if it's a Cloudflare block
+      if (errorText.includes('Cloudflare') || errorText.includes('blocked')) {
+        return NextResponse.json(
+          { 
+            error: 'Cloudflare security block - please try again in a few minutes', 
+            success: false,
+            details: 'The server is temporarily blocked by Pump.fun. This usually resolves itself. Try again shortly.'
+          }, 
+          { status: 503, headers: corsHeaders }
+        );
+      }
+      
       return NextResponse.json(
         { 
           error: 'Failed to create token metadata', 
           success: false,
-          details: errorText
+          details: errorText.substring(0, 200)
         }, 
         { status: 500, headers: corsHeaders }
       );
@@ -615,6 +706,38 @@ export async function OPTIONS() {
       ...corsHeaders,
       'Access-Control-Max-Age': '86400',
     },
+  });
+}
+
+// Handle GET request for status check
+export async function GET() {
+  const numCores = os.cpus().length;
+  const maxWorkers = Math.min(numCores, 28);
+  const workersPerRequest = concurrentVanityRequests > 0 
+    ? Math.floor(maxWorkers / concurrentVanityRequests) 
+    : maxWorkers;
+  
+  return NextResponse.json({
+    status: 'operational',
+    vanityEnabled: VANITY_SUFFIX.length > 0,
+    vanitySuffix: VANITY_SUFFIX,
+    useWorkers: USE_WORKERS,
+    system: {
+      totalCores: numCores,
+      maxWorkers: maxWorkers,
+      concurrentRequests: concurrentVanityRequests,
+      workersPerRequest: workersPerRequest,
+      loadPercentage: concurrentVanityRequests > 0 
+        ? Math.round((concurrentVanityRequests * workersPerRequest / maxWorkers) * 100)
+        : 0
+    },
+    network: NETWORK,
+    pricing: {
+      amount: '2.00',
+      currency: 'USDC'
+    }
+  }, {
+    headers: corsHeaders
   });
 }
 
