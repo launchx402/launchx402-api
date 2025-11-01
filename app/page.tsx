@@ -10,7 +10,7 @@ export default function Home() {
     }}>
       <header style={{ marginBottom: '50px' }}>
         <h1 style={{ fontSize: '2.5rem', fontWeight: '600', marginBottom: '10px' }}>
-          LaunchX402
+          Launch x402
         </h1>
         <p style={{ fontSize: '1.2rem', color: '#666', marginBottom: '0' }}>
           Launch Pump.fun tokens instantly with x402 crypto payments
